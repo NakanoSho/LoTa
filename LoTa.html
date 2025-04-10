@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JiraClone - Task List (統合版)</title>
+  <style>
+    :root {
+      --primary: #0052cc;
+      --primary-light: #4c9aff;
+      --primary-dark: #1d4ed8;
+      --secondary: #6554c0;
+      --secondary-light: #cbd5e1;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --success: #36b37e;
+      --danger: #ff5630;
+      --warning: #ffab00;
+      --text: #172b4d;
+      --text-light: #6b778c;
+      --bg-light: #f4f5f7;
+      --white: #ffffff;
+      --border: #dfe1e6;
+      --border-radius: 8px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Arial, Meiryo, sans-serif;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- 追加：ページ切り替え用 --- */
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ログインページ用スタイル */
+    #loginPage {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: var(--bg-light);
+    }
+
+    #loginPage form {
+      background-color: var(--white);
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #loginPage h2 {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    #loginPage input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    #loginPage button {
+      width: 100%;
+      padding: 8px;
+    }
+
+    .navbar {
+      background-color: var(--primary);
+      color: var(--white);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 36px;
+    }
+
+    .navbar-brand,
+    .navbar-select {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .navbar-select {
+      background-color: transparent;
+      border: 1px solid var(--text-light);
+      border-radius: 4px;
+      padding: 0.2rem 0.4rem;
+      padding-right: 2rem;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='%23ffffff' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+    }
+
+    .navbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+
+    .btn-primary:hover {
+      background-color: #0747a6;
+    }
+
+    .btn-secondary {
+      background-color: var(--white);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--bg-light);
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+    }
+
+    .main-container {
+      display: flex;
+      height: calc(100vh - 56px);
+    }
+
+    .content {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .filter-container {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .task-list-container {
+      background-color: var(--white);
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .task-list-header {
+      padding: 12px 16px;
+      background-color: var(--bg-light);
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-list-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    table.task-list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table.task-list th,
+    table.task-list td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    /* ★ テーブルヘッダー：フィルター用ボタン（項目名＋▼） */
+    table.task-list th {
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-light);
+      font-size: 0.85rem;
+      position: relative;
+    }
+
+    table.task-list th .filter-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      /* デフォルトはグレー */
+      color: grey;
+    }
+
+    /* フィルター適用中の場合は青 */
+    .filter-btn.filtered {
+      color: var(--primary);
+    }
+
+    table.task-list tr:hover {
+      background-color: var(--bg-light);
+      cursor: pointer;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: #EBECF0;
+      color: var(--text);
+      margin-right: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+      gap: 8px;
+    }
+
+    .page-item {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .page-item.active {
+      background-color: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+
+    /* Import Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: var(--white);
+      margin: 5% auto;
+      padding: 24px;
+      border-radius: 4px;
+      width: 80%;
+      max-width: 700px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .file-input-zone {
+      border: 2px dashed var(--border);
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .file-input-zone:hover {
+      border-color: var(--primary);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: var(--white);
+      padding: 12px 16px;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      min-width: 250px;
+      display: none;
+      border-left: 4px solid var(--primary);
+    }
+
+    .toast-success {
+      border-left-color: var(--success);
+    }
+
+    .toast-error {
+      border-left-color: var(--danger);
+    }
+
+    .toast-close {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      cursor: pointer;
+    }
+
+    /* スライドパネル本体 */
+    .slide-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 600px;
+      height: 100vh;
+      background-color: var(--surface);
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.3s ease-in-out;
+      transform: translateX(100%);
+    }
+
+    .slide-panel.active {
+      transform: translateX(0);
+    }
+
+    /* リサイズ用ハンドル */
+    .panel-resize-handle {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 2000;
+    }
+
+    /* パネルのオーバーレイ */
+    .panel-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .panel-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* パネルヘッダー（スクロールしない固定領域） */
+    .panel-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--secondary-light);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .issue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .issue-header-left {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .issue-header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .issue-page-info {
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+
+    .panel-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--text-light);
+      font-size: 1.5rem;
+      transition: var(--transition);
+    }
+
+    .panel-close:hover {
+      color: var(--text);
+    }
+
+    .issue-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* まず、親要素に container-type を設定します */
+    .parent-container {
+      container-type: inline-size;
+    }
+
+    /* 子要素の .issue-meta はデフォルトで2列 */
+    .issue-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-row-gap: 0.75rem;
+      grid-column-gap: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    /* 親要素の横幅が700px以上の場合に、3列に変更 */
+    @container (min-width: 700px) {
+      .issue-meta {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* 親要素の横幅が900px以上の場合に、4列に変更 */
+    @container (min-width: 900px) {
+      .issue-meta {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    /* 各項目 */
+    .meta-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .meta-label {
+      color: var(--text-light);
+      font-size: 0.75rem;
+    }
+
+    .meta-value {
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      color: #606060;
+      font-size: 0.875rem;
+      min-height: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .meta-value span {
+      /* 編集前の表示部分 */
+    }
+
+    /* パネルメイン（スクロール領域） */
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+
+    /* コメント関連（省略） */
+    .comment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .comment-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--secondary-light);
+    }
+
+    .comment-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .comment-avatar {
+      width: 2rem;
+      height: 2rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background-color: #ffab00;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .avatar {
+      width: 1.4rem;
+      height: 1.4rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background-color: #ffab00;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+
+    .comment-author-date {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text);
+    }
+
+    .comment-date {
+      font-size: 0.75rem;
+      color: var(--text-light);
+    }
+
+    .comment-text {
+      font-size: 0.875rem;
+      color: var(--text);
+      white-space: pre-wrap;
+      margin-left: calc(2.25rem + 0.75rem);
+    }
+
+    .comment-actions {
+      margin-left: auto;
+      position: relative;
+    }
+
+    .action-trigger {
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-light);
+      transition: var(--transition);
+      padding: 0.25rem;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    .action-trigger:hover {
+      background-color: var(--secondary-light);
+      color: var(--text);
+    }
+
+    .nav-action-trigger {
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0.25rem;
+      border-radius: 4px;
+    }
+
+    .nav-action-trigger:hover {
+      background-color: var(--secondary-light);
+    }
+
+    .action-menu {
+      width: 100px;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: var(--surface);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      z-index: 10;
+      display: none;
+    }
+
+    .action-menu.active {
+      display: block;
+    }
+
+    .action-menu button {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text);
+      transition: var(--transition);
+    }
+
+    .action-menu button:hover {
+      background-color: var(--secondary-light);
+    }
+
+    /* ★ Excel風フィルター用パネル */
+    #excelFilterPanel {
+      display: none;
+      position: absolute;
+      border: 1px solid var(--border);
+      background: var(--white);
+      z-index: 1000;
+      padding: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* ドロップダウン用ラッパー */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* フィードバックモーダル */
+    #feedbackModal {
+      display: none;
+      position: fixed;
+      z-index: 1100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    #feedbackModal .modal-content {
+      background-color: var(--white);
+      margin: 10% auto;
+      padding: 24px;
+      border-radius: 4px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    #feedbackModal .modal-content h3 {
+      margin-bottom: 16px;
+    }
+
+    #feedbackModal .modal-content label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    #feedbackModal .modal-content input,
+    #feedbackModal .modal-content textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    /* 固定幅クラス */
+    .no1 {
+      width: 100px;
+      min-width: 100px;
+    }
+
+    .no2 {
+      width: calc(100% - 940px);
+      min-width: 400px;
+    }
+
+    .no3  {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .no4 {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .no5 {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .no6 {
+      width: 240px;
+      min-width: 240px;
+    }
+
+    .no7 {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .no8 {
+      width: 120px;
+      min-width: 120px;
+    }
+
+  </style>
+</head>
+
+<body>
+  <!-- ① ログインページ（初回表示） -->
+  <div id="loginPage" class="page">
+    <form id="loginForm">
+      <h2>ログイン</h2>
+      <input type="text" id="loginUsername" placeholder="ユーザー名" required>
+      <input type="password" id="loginPassword" placeholder="パスワード" required>
+      <button type="submit" class="btn btn-primary">ログイン</button>
+      <p id="loginError" style="color: red; display: none;"></p>
+    </form>
+  </div>
+
+  <!-- ② メインページ（ログイン後に表示） -->
+  <div id="mainPage" class="page active">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <select id="pageTypeSelector" class="navbar-select">
+        <option value="taskList" selected>課題一覧</option>
+        <option value="kanbanBoard">課題一覧</option>
+        <option value="reports">課題一覧</option>
+        <option value="settings">課題一覧</option>
+      </select>
+      <div class="navbar-actions">
+        <div class="dropdown">
+          <button class="nav-action-trigger" id="nav-action-trigger">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+          <div class="action-menu" id="nav-dropdown-menu">
+            <button type="button" id="settings-btn">設定</button>
+            <button type="button" id="help-btn">ヘルプ</button>
+            <button type="button" id="feedbackBtn">報告</button>
+          </div>
+        </div>
+        <div class="dropdown">
+          <div class="avatar" id="avatar-trigger">JD</div>
+          <div class="action-menu" id="avatar-dropdown-menu">
+            <button type="button" id="logout-btn">ログアウト</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main-container">
+      <div class="content">
+        <div class="filter-container">
+          <button id="createTask" class="btn btn-primary">新規課題</button>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search tasks...">
+          </div>
+          <div>
+            <span id="taskCount">0</span> tasks
+          </div>
+        </div>
+
+        <div class="task-list-container">
+          <!--
+          <div class="task-list-header">
+            
+            <div class="task-list-actions">
+              <button id="exportTasks" class="btn btn-secondary">Export</button>
+            </div>
+          </div>-->
+          <div style="overflow-x: auto;">
+            <table class="task-list" id="taskList">
+              <thead>
+                <tr>
+                  <th class="no1">
+                    <button type="button" class="filter-btn" data-column="id" id="filter-btn-id">
+                      課題番号
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no2">
+                    <button type="button" class="filter-btn" data-column="title" id="filter-btn-title">
+                      タイトル
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no3">
+                    <button type="button" class="filter-btn" data-column="assignee" id="filter-btn-assignee">
+                      担当者
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no4">
+                    <button type="button" class="filter-btn" data-column="status" id="filter-btn-status">
+                      ステータス
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no5">
+                    <button type="button" class="filter-btn" data-column="priority" id="filter-btn-priority">
+                      優先度
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no6">
+                    <button type="button" class="filter-btn" data-column="tags" id="filter-btn-tags">
+                      タグ
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no7">
+                    <button type="button" class="filter-btn" data-column="created" id="filter-btn-created">
+                      作成日
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                  <th class="no8">
+                    <button type="button" class="filter-btn" data-column="updated" id="filter-btn-updated">
+                      更新日
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 10l5 5 5-5H7z" />
+                      </svg>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="taskListBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <!-- Excel風フィルター用パネル -->
+    <div id="excelFilterPanel"></div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeImportModal">×</span>
+        <h3>Import Tasks</h3>
+        <div class="file-input-zone" id="dropZone">
+          <p>Drag &amp; drop JSON file here or click to select file</p>
+          <input type="file" id="fileInput" accept=".json" style="display: none;">
+        </div>
+        <div class="modal-footer">
+          <button id="cancelImport" class="btn btn-secondary">Cancel</button>
+          <button id="confirmImport" class="btn btn-primary" disabled>Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- フィードバックモーダル -->
+    <div id="feedbackModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeFeedbackModal">&times;</span>
+        <h3>フィードバック / 報告</h3>
+        <form id="feedbackForm">
+          <div>
+            <label for="feedbackEmail">メールアドレス（任意）:</label>
+            <input type="email" id="feedbackEmail" placeholder="example@example.com">
+          </div>
+          <div>
+            <label for="feedbackMessage">メッセージ</label>
+            <textarea id="feedbackMessage" rows="5" placeholder="フィードバック内容を入力してください。"></textarea>
+          </div>
+          <div style="text-align: right; margin-top: 1rem;">
+            <button type="button" id="cancelFeedback" class="btn btn-secondary">キャンセル</button>
+            <button type="submit" id="submitFeedback" class="btn btn-primary">送信</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- パネルのオーバーレイ -->
+    <div class="panel-overlay" id="panel-overlay"></div>
+
+    <!-- スライドパネル -->
+    <div class="slide-panel" id="slide-panel">
+      <!-- ドラッグ用ハンドル -->
+      <div class="panel-resize-handle" id="panel-resize-handle"></div>
+      <!-- パネルヘッダー -->
+      <div class="panel-header">
+        <div class="issue-header">
+          <div class="issue-header-left" id="issue-code">PRJ001</div>
+          <div class="issue-header-right">
+            <button class="btn btn-secondary btn-sm" id="nav-prev">＜</button>
+            <span class="issue-page-info" id="issue-page-info">1 / 3</span>
+            <button class="btn btn-secondary btn-sm" id="nav-next">＞</button>
+          </div>
+        </div>
+        <button class="panel-close" id="panel-close">&times;</button>
+        <div class="issue-title" id="issue-title"></div>
+        <div class="parent-container">
+          <div class="issue-meta" id="issue-meta"></div>
+        </div>
+      </div>
+      <!-- メインコンテンツ（スクロール） -->
+      <div class="panel-content">
+        <div class="comment-list" id="comment-list">
+          <!-- コメントはJSで動的にレンダリング -->
+        </div>
+      </div>
+
+      <!-- パネルフッター（コメント入力） -->
+      <div class="panel-footer">
+        <textarea class="comment-input" id="comment-input" rows="3" placeholder="コメントを入力..."></textarea>
+        <button class="comment-submit" id="comment-submit">送信</button>
+      </div>
+    </div>
+
+    <!-- Toast Notification (追加) -->
+    <div id="toast" class="toast toast-success" style="display: none;">
+      <span id="toastMessage">Task updated successfully</span>
+      <button id="toastClose" class="toast-close">×</button>
+    </div>
+  </div> <!-- end of #mainPage -->
+
+  <!-- Embedded Task Data (JSON) -->
+  <script type="application/json" id="taskData">
+[
+  {
+    "id": "PRJ-1",
+    "title": "IaaS内のルーティングについて",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": [
+      {
+        "author": "John Doe",
+        "date": "2025/03/23 17:11",
+        "text": "IaaS内のセグメントをルーティングさせたいです。\n\n【前提】\n・IaaS内のセグメントをルーティングさせる\n・ハウジングラックのスイッチから接続するセグメント\n　インターネットFW接続するセグメント\n　IaaS基盤上のシステム（サーバ）で複数利用するセグメント\n　これらをルーティングさせる",
+        "edited": false,
+        "history": []
+      },
+      {
+        "author": "John Doe",
+        "date": "2025/03/23 17:11",
+        "text": "ああああ",
+        "edited": false,
+        "history": []
+      },
+      {
+        "author": "admin",
+        "date": "2025/03/24 11:15",
+        "text": "aaaaaaaaaaa",
+        "edited": false,
+        "history": []
+      },
+      {
+        "author": "John Doe",
+        "date": "2025/3/27 11:11:10",
+        "text": "oo",
+        "edited": false,
+        "history": []
+      }
+    ]
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  },
+  {
+    "id": "PRJ-2",
+    "title": "タイトル",
+    "description": "Initialize Git repo and set up project structure",
+    "status": "Done",
+    "priority": "High",
+    "assignee": "束原 輝彦",
+    "tags": [
+      "Setup",
+      "Git"
+    ],
+    "created": "2023-01-01T00:00:00Z",
+    "updated": "2025-03-24T02:15:07.494Z",
+    "startDate": "2023-01-01T00:00:00.000Z",
+    "endDate": "2023-01-02T00:00:00.000Z",
+    "attention": "",
+    "comments": []
+  }
+]
+</script>
+
+  <script>
+    //───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　ユーザクラス　　　
+    //───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+    "use strict";
+
+    class User {
+      constructor(username, password, displayName, abbreviatedName, role, permission, team, email) {
+        this._username = username;              // ユーザ名
+        this._password = password;              // パスワード（ハッシュ化推奨）
+        this._displayName = displayName;        // ユーザ表示名
+        this._abbreviatedName = abbreviatedName;// ユーザ略称（アイコン表示用）
+        this._role = role;                      // ロール
+        this._permission = permission;          // 権限
+        this._team = team;                      // チーム
+        this._email = email;                    // メールアドレス
+      }
+
+      // ユーザ名
+      get username() {
+        return this._username;
+      }
+      set username(value) {
+        this._username = value;
+      }
+
+      // パスワード
+      get password() {
+        return this._password;
+      }
+      set password(value) {
+        this._password = value;
+      }
+
+      // ユーザ表示名
+      get displayName() {
+        return this._displayName;
+      }
+      set displayName(value) {
+        this._displayName = value;
+      }
+
+      // ユーザ略称（アイコン表示用）
+      get abbreviatedName() {
+        return this._abbreviatedName;
+      }
+      set abbreviatedName(value) {
+        this._abbreviatedName = value;
+      }
+
+      // ロール
+      get role() {
+        return this._role;
+      }
+      set role(value) {
+        this._role = value;
+      }
+
+      // 権限
+      get permission() {
+        return this._permission;
+      }
+      set permission(value) {
+        this._permission = value;
+      }
+
+      // チーム
+      get team() {
+        return this._team;
+      }
+      set team(value) {
+        this._team = value;
+      }
+
+      // メールアドレス
+      get email() {
+        return this._email;
+      }
+      set email(value) {
+        this._email = value;
+      }
+
+      // ユーザ情報を文字列にまとめて返す（デバッグ用）
+      toString() {
+        return `User(username: ${this._username}, displayName: ${this._displayName}, ` +
+          `abbreviatedName: ${this._abbreviatedName}, role: ${this._role}, ` +
+          `permission: ${this._permission}, team: ${this._team}, email: ${this._email})`;
+      }
+    }
+
+    let currentUser = null;
+    const secretKeyBase64 = "bXlzdXBlcnNlY3JldGtleTEyMzQ1Njc4OTAxMjM0NTY=";
+    const encryptedUserBlob = {
+      iv: "YN6DT4oZhqP1dBTO",
+      data: "mkY2jtbSbBsVCDY7oMRpxdrCZagnYmx/hQxUF+A3rX+XsyhBAt5N87SgP+H/xEvmdS0SGtDXPL4qDGlbW168bq5n29Y1TGfuCGpnbTsSHTvLCUN5HgKnWeGG7YioExBW+xHmd/OJSWVfgcYpr4cdXmDvR/AiVfHBkCG66JjjBID+wEGnKHyHsL0kYHOKCTC64IsXLBbtkb/YJpudwSjoh+bkUm53hFY8DjEco1w4Hpd3CW1eO0PQw0JW/xww+IphOfg0Yt1w9HI4FLRAdcL1GmMLqhj3WQHhR6/sW5AhXI15MG6CP7XJSytd3thztSC/UFz15pPwWdsRQawGwiPNpmgP/V5cOcqyzcZ9b4qiVlOTua0tFg8o9VnqfG3FxdoDSS/ugn9UCsW7KM12i7MqyH4ntMucUoDWwR9E7In7mcFjJYAP0quq6f0Q3Hdi/ZevieK2e5YqwYvi0ZVlJ8/iJfNTcnKrdjmXudmawO1SZt8Bay15rDsa4GH1l0unQTHwM0xeIR09olbwyQNkNEjprJ08lr1hmNfSCyTxXN5zOWrco0xCW3vjw5i7K/7iaOlJgvALuHH1/tMVfwwv3E1huRj6CnLeRlVHrotbS5sX/qoXxkuecnurdLIsIm3b5KdF2bZJhXmU3P8JdeSvwzxA8InJIHUYCnpWEnD6e4rJHSynCjHJlE7sjTEdtkLHX26wWT6kv8HPydC63FfEz8ekTlrKKpatvVPo+9BMZPiaoZssakv5aM820m7P/mpBHyzickaQ87EEXUKL0cOOhxiMfk3n0c+PjDBH8NEBrLoB9TnhB8VODLZm+V7OWI0n2NLXyEw2IEQhudwvZ2Uxt39wgdGNvw8eoFE6RwVntZNpsKeBd/OkVmZ1aRQ6BKTye3oYPna07iiiQ7nIN2nV/79wZt4En7PaKtwrguwJUIAX07i4gYFlBo9M1xm7Z1gj2veSdmHitaiOB4ugrqcxAKod1CeIYHpT7Zd+rzw/S7vA3zOIbwUf12YxLmsxmsRBEC9pj2k/URJigBlzhuD4bPW/2rQ5meOv0Mia7wm1hTBQrFqU3S2cNMst4XOa39Ay1kVQdTaX3uUkOwd0Vmj2KelVgOWi3v60ttDO2LRlBGeC8HR7pi/kLq8gJRridajK5B0DyN49HzZBOAXqv26lMw9PPzb+APYgSxFRw17WTyUgt0ZZuXEeMTdHFa7y1vi+cMSAsse1mPpX8MzKDhqOwuTfCzyosEw3gHZ8H27StM6JLudY0tcpJ5F9fJm05mfjgpGIQULtLnRMdNgi/fEIEayHVmt1AZYUjD7PVtX8PRSGD2vFH/SJGLtaUhZtZoyGlmXN4gE8LPn7V1a9tHeZJHvr6Zjgbf0FRS1dBNVeDcJgK8yxPht+3T5ZJefDhouk0NEMoGlfsDbTI5gqaZfGpSaSquSC/KP5FD64bZkJ8GRbuu6EUEvUTRF2K5vD4PFwKsLqKgDY5Dmn1nPGnfla9/H5zLhJ/R3QO4JccJIQSOvRG1rlkekrHJQPbEw557ACTG7uRWI9zVzPh6UxnWOs4fFwHKw5qshamvzI9EvVA2pqDkIqDRuKjyn1flsDbVzi+mEymkeBPireAVMkGABrIznb9XohY5JINdxQLmnpJpOhkwtRIKURPLJrtrHIvaOTwbChpCdBXXqpe2DFa4KKH7dFt1O9ppVEKRw9nAsK4UYhNxuMZU7VqbnC6I5os4Lk6tpeD96TuEeK/cgrUSYiQQ3Kxuoca1K55Ka3NVr67I1BgIqD3jZQsfahMSy8lg7l8XUcFzGt6vrvp4+Fg1NdW9HxTt8T9rAXUL8DFhktS+kcWWZgF5r1qeXUpIOeLYyrIiH19+YKZNHQvVZKIlRvTuPK/ddBOTTC6YM1t2EOokCmewRnMeonQnNfCLS8Qow+0ZR1qwGyfIyuv4UYZDc0UB53oO81YyIvSYdbJan7obXKNcOL2YR14WQsxlgZ2aBw49ExrJhzE2HPGfDip7Bw+n1R33MXXYZLDzVr+5l37iPNDFLGb2vQpP1P33NaxQHCBiojzQAyVVD1Bmr6GjZAnWdOzT3Ar2fWLOPRaz5eY9/ap6WRbhMVnSup8LsiV1fBamIeYVe4jRvysJeP+k8nkq9832QDHbj9aUTPCG7HMDZWqB+p2dU2xg/PTrW/zMrSeyx8rVuE8suz9uhWm1c6Pw6xxHy5HNMNyXFFbCU5fkWeeTYefcH7g51idQ8xc2BCePYA4g1sVwYfXxASQZLTKU7ZUNaDA21YGU64K/dE3IIOmNeWt1YIK3vskZirV6/+zfvekXNPCLhUqtTC7WE3ztPmNGcKlnYXTRK2QlbdPk1HYJEjF2NtMqymzwyrdgVb399vYxtq+GmMoqCghOvjfQzQNokkWT3Bwx8qfJ05qmviyoqacy0Fj4F5bfLlL15ER9FIImHMZ9v+ykzcg65WnPp12OPe2JX53bHHOT4HIWdw2x/rRYU2pdPUwuottLF8PMpry/1lwn/Iwg==",
+      authTag: "wDiXxgRVNLqi9keQUiul0w=="
+    };
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　秘密鍵（Base64形式）からAES-GCM用のCryptoKeyオブジェクトを生成する関数。
+    //　　　　　引数として与えられたBase64エンコードされた秘密鍵をデコードし、暗号化・復号処理に使用するキーをインポートする。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    async function importKey(secretBase64) {
+      const rawKey = Uint8Array.from(atob(secretBase64), c => c.charCodeAt(0));
+      return crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
+    }
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　秘密鍵（Base64形式）からAES-GCM用のCryptoKeyオブジェクトを生成する関数。
+    //　　　　　引数として与えられたBase64エンコードされた秘密鍵をデコードし、暗号化・復号処理に使用するキーをインポートする。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    async function decryptUserBlob() {
+      const key = await importKey(secretKeyBase64);
+      const iv = Uint8Array.from(atob(encryptedUserBlob.iv), c => c.charCodeAt(0));
+      const ciphertext = Uint8Array.from(atob(encryptedUserBlob.data), c => c.charCodeAt(0));
+      const authTag = Uint8Array.from(atob(encryptedUserBlob.authTag), c => c.charCodeAt(0));
+      const combined = new Uint8Array(ciphertext.length + authTag.length);
+      combined.set(ciphertext);
+      combined.set(authTag, ciphertext.length);
+      try {
+        const decryptedBuffer = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv, tagLength: 128 },
+          key,
+          combined
+        );
+        const dec = new TextDecoder();
+        // JSON からパースされたデータは、各ユーザのオブジェクトの配列であると仮定
+        const data = JSON.parse(dec.decode(decryptedBuffer));
+        // ここで、各オブジェクトを User クラスのインスタンスに変換（User クラスは事前定義）
+        return data.map(u => new User(
+          u.username,
+          u.password,
+          u.displayName,
+          u.abbreviatedName,
+          u.role,
+          u.permission,
+          u.team,
+          u.email
+        ));
+      } catch (e) {
+        console.error("復号エラー：データが改ざんされている可能性があります。", e);
+        return null;
+      }
+    }
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　ログインボタンのイベント処理関数。
+    //　　　　　[loginUsername] と [loginPassword] を読み取り、暗号化されたユーザ一覧から一致するユーザの有無を探索する。
+    //　　　　　暗号化されたユーザ一覧の復号に失敗した場合は [loginError] エリアに「システムエラー」を表示する。
+    //　　　　　ユーザ・パスが一致する場合は以下の処理を実行する。
+    //　　　　　　(1)　ログイン画面を非表示にする。
+    //　　　　　　(2)　メインページを表示する。
+    //　　　　　　(3)　ログインユーザ・権限・ロール情報を設定する。
+    //　　　　　ユーザ・パスが不一致の場合は [loginError] エリアに「ユーザ名またはパスワードが違います」と表示する。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    async function tryLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      const loginError = document.getElementById("loginError");
+      const users = await decryptUserBlob();
+      if (!users) {
+        loginError.textContent = "システムエラー（データ検証に失敗）";
+        loginError.style.display = "block";
+        return;
+      }
+      // 既に User クラスのインスタンスが格納されているので、そのまま検索
+      const matchedUser = users.find(u => u.username === username && u.password === password);
+      if (matchedUser) {
+        currentUser = matchedUser;
+        hideLoginScreen();
+        showPage("mainPage");
+        updatePermissions();
+      } else {
+        loginError.textContent = "ユーザ名またはパスワードが違います。";
+        loginError.style.display = "block";
+      }
+    }
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　ログイン画面を非表示にする関数。
+    //　　　　　ログイン成功後に呼び出され、ログイン画面をDOMから非表示にするための処理を実行する。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    function hideLoginScreen() {
+      document.getElementById("loginPage").style.display = "none";
+      // 既に上で要素を取得しているので、loginPage（未定義）の再参照は不要です
+    }
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　指定されたページIDに対応するページを表示する関数。
+    //　　　　　全ページからactiveクラスを削除し、指定されたページ要素にactiveクラスを追加して表示状態にする。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    function showPage(pageId) {
+      document.querySelectorAll(".page").forEach(page => {
+        page.classList.remove("active");
+      });
+      document.getElementById(pageId).classList.add("active");
+    }
+
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    //【概要】　ログインユーザの権限に応じて、タスク作成ボタンの有効/無効を設定する関数。
+    //　　　　　ログインユーザが管理権限を持つ場合はタスク作成を許可し、そうでない場合はボタンを無効化する。
+    //──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    function updatePermissions() {
+      const canEdit = currentUser && currentUser.role.includes("管理");
+      // 必要に応じて、タスク作成ボタンの状態を切り替える
+      // document.getElementById("createTask").disabled = !canEdit;
+    }
+
+
+    let tasksData = [];
+    const itemsPerPage = 10;
+    let currentPage = 1;
+    let filteredTasks = [];
+    let currentTaskIndex = 0;
+    let isCreatingTask = false;
+
+    const taskListBody = document.getElementById('taskListBody');
+    const taskCount = document.getElementById('taskCount');
+    const searchInput = document.getElementById('searchInput');
+    const pagination = document.getElementById('pagination');
+    const importModal = document.getElementById('importModal');
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const confirmImport = document.getElementById('confirmImport');
+    const closeImportModal = document.getElementById('closeImportModal');
+    const cancelImport = document.getElementById('cancelImport');
+    //const exportSampleJson = document.getElementById('exportSampleJson');
+    const exportTasks = document.getElementById('exportTasks');
+    const createTaskBtn = document.getElementById('createTask');
+
+    const slidePanel = document.getElementById('slide-panel');
+    const panelOverlay = document.getElementById('panel-overlay');
+    const panelClose = document.getElementById('panel-close');
+    const issueCodeEl = document.getElementById('issue-code');
+    const issueTitleEl = document.getElementById('issue-title');
+    const issueMetaEl = document.getElementById('issue-meta');
+    const issuePageInfo = document.getElementById('issue-page-info');
+    const commentListEl = document.getElementById('comment-list');
+    const commentInput = document.getElementById('comment-input');
+    const commentSubmit = document.getElementById('comment-submit');
+    const navPrev = document.getElementById('nav-prev');
+    const navNext = document.getElementById('nav-next');
+    const panelResizeHandle = document.getElementById('panel-resize-handle');
+
+    const slideTitle = document.getElementById('slideTitle');
+    const slideTaskId = document.getElementById('slideTaskId');
+    const slideTaskTitle = document.getElementById('slideTaskTitle');
+    const slideTaskDescription = document.getElementById('slideTaskDescription');
+    const slideTaskStatus = document.getElementById('slideTaskStatus');
+    const slideTaskPriority = document.getElementById('slideTaskPriority');
+    const slideTaskAssignee = document.getElementById('slideTaskAssignee');
+    const slideTaskTags = document.getElementById('slideTaskTags');
+    const slideTaskStartDate = document.getElementById('slideTaskStartDate');
+    const slideTaskEndDate = document.getElementById('slideTaskEndDate');
+    const slideTaskAttention = document.getElementById('slideTaskAttention');
+
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastClose = document.getElementById('toastClose');
+
+    let htmlFileHandle = null;
+
+    // ★ Excel風フィルター用グローバル変数
+    let excelUniqueValues = {};
+    let excelFilterState = {};
+    let currentExcelFilterColumn = null;
+    const columnNameMap = {
+      id: "課題番号",
+      title: "タイトル",
+      assignee: "担当者",
+      status: "ステータス",
+      priority: "優先度",
+      tags: "タグ",
+      created: "作成日",
+      updated: "更新日"
+    };
+
+    function initializeExcelFilters() {
+      excelUniqueValues = { id: [], title: [], assignee: [], status: [], priority: [], tags: [], created: [], updated: [] };
+      tasksData.forEach(task => {
+        if (task.id && !excelUniqueValues.id.includes(task.id)) excelUniqueValues.id.push(task.id);
+        if (task.title && !excelUniqueValues.title.includes(task.title)) excelUniqueValues.title.push(task.title);
+        if (task.assignee && !excelUniqueValues.assignee.includes(task.assignee)) excelUniqueValues.assignee.push(task.assignee);
+        if (task.status && !excelUniqueValues.status.includes(task.status)) excelUniqueValues.status.push(task.status);
+        if (task.priority && !excelUniqueValues.priority.includes(task.priority)) excelUniqueValues.priority.push(task.priority);
+        if (Array.isArray(task.tags)) {
+          task.tags.forEach(tag => {
+            if (tag && !excelUniqueValues.tags.includes(tag)) {
+              excelUniqueValues.tags.push(tag);
+            }
+          });
+        }
+        let createdFormatted = formatDate(new Date(task.created), 'yyyy/MM/dd');
+        if (!excelUniqueValues.created.includes(createdFormatted)) excelUniqueValues.created.push(createdFormatted);
+        let updatedFormatted = formatDate(new Date(task.updated), 'yyyy/MM/dd');
+        if (!excelUniqueValues.updated.includes(updatedFormatted)) excelUniqueValues.updated.push(updatedFormatted);
+      });
+      for (let col in excelUniqueValues) {
+        excelUniqueValues[col].sort();
+      }
+      excelFilterState = {};
+      for (let col in excelUniqueValues) {
+        excelFilterState[col] = new Set(excelUniqueValues[col]);
+      }
+    }
+
+    function openExcelFilterPanel(column, buttonElem) {
+      currentExcelFilterColumn = column;
+      const panel = document.getElementById("excelFilterPanel");
+      panel.innerHTML = "";
+
+      const title = document.createElement("div");
+      title.textContent = columnNameMap[column] + "フィルター";
+      title.style.fontWeight = "bold";
+      title.style.marginBottom = "8px";
+      panel.appendChild(title);
+
+      const searchInputElem = document.createElement("input");
+      searchInputElem.type = "text";
+      searchInputElem.placeholder = "検索...";
+      searchInputElem.style.width = "100%";
+      searchInputElem.style.boxSizing = "border-box";
+      searchInputElem.style.marginBottom = "8px";
+      panel.appendChild(searchInputElem);
+
+      const selectAllLabel = document.createElement("label");
+      const selectAllCheckbox = document.createElement("input");
+      selectAllCheckbox.type = "checkbox";
+      selectAllCheckbox.checked = (excelFilterState[column].size === excelUniqueValues[column].length);
+      selectAllCheckbox.onchange = function () {
+        const checkboxes = panel.querySelectorAll(".excel-filter-option");
+        checkboxes.forEach(cb => {
+          cb.checked = selectAllCheckbox.checked;
+          updateExcelFilterState(column, cb.value, selectAllCheckbox.checked);
+        });
+        applyFilters();
+        updateExcelFilterHeaderIcon(column);
+      };
+      selectAllLabel.appendChild(selectAllCheckbox);
+      selectAllLabel.appendChild(document.createTextNode(" すべて選択"));
+      panel.appendChild(selectAllLabel);
+
+      const checkboxContainer = document.createElement("div");
+      checkboxContainer.style.marginTop = "8px";
+      panel.appendChild(checkboxContainer);
+
+      function renderCheckboxes(filterText) {
+        checkboxContainer.innerHTML = "";
+        const values = excelUniqueValues[column];
+        values.forEach(value => {
+          if (value.toLowerCase().indexOf(filterText.toLowerCase()) === -1) return;
+          const label = document.createElement("label");
+          label.style.display = "block";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "excel-filter-option";
+          checkbox.value = value;
+          checkbox.checked = excelFilterState[column].has(value);
+          checkbox.onchange = function () {
+            updateExcelFilterState(column, value, checkbox.checked);
+            const allCheckboxes = panel.querySelectorAll(".excel-filter-option");
+            let allChecked = true;
+            allCheckboxes.forEach(cb => { if (!cb.checked) allChecked = false; });
+            selectAllCheckbox.checked = allChecked;
+            applyFilters();
+            updateExcelFilterHeaderIcon(column);
+          };
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(" " + value));
+          checkboxContainer.appendChild(label);
+        });
+      }
+      renderCheckboxes("");
+      searchInputElem.addEventListener("keyup", function () {
+        renderCheckboxes(searchInputElem.value);
+      });
+
+      const rect = buttonElem.parentElement.getBoundingClientRect();
+      panel.style.top = (rect.bottom + window.scrollY) + "px";
+      panel.style.left = (rect.left + window.scrollX) + "px";
+      panel.style.display = "block";
+    }
+
+    function updateExcelFilterState(column, value, isChecked) {
+      if (isChecked) {
+        excelFilterState[column].add(value);
+      } else {
+        excelFilterState[column].delete(value);
+      }
+    }
+
+    function updateExcelFilterHeaderIcon(column) {
+      const btn = document.getElementById("filter-btn-" + column);
+      if (excelFilterState[column].size !== excelUniqueValues[column].length) {
+        btn.classList.add("filtered");
+      } else {
+        btn.classList.remove("filtered");
+      }
+    }
+
+    document.addEventListener("click", function (event) {
+      const panel = document.getElementById("excelFilterPanel");
+      if (!panel.contains(event.target) && !event.target.classList.contains("filter-btn")) {
+        panel.style.display = "none";
+      }
+      // ドロップダウンメニューも外部クリックで閉じる
+      const navDropdown = document.getElementById('nav-dropdown-menu');
+      const avatarDropdown = document.getElementById('avatar-dropdown-menu');
+      if (navDropdown) navDropdown.classList.remove('active');
+      if (avatarDropdown) avatarDropdown.classList.remove('active');
+    });
+
+    // 【フィルター関数改修】不要な<select>に依存せず、検索テキストとExcel風フィルターのみでタスクを抽出
+    function applyFilters() {
+      const searchTerm = searchInput.value.toLowerCase();
+      filteredTasks = tasksData.filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(searchTerm) ||
+          task.description.toLowerCase().includes(searchTerm) ||
+          task.id.toLowerCase().includes(searchTerm) ||
+          task.assignee.toLowerCase().includes(searchTerm) ||
+          task.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+        let matchesExcel = true;
+        for (const col in excelFilterState) {
+          const selectedValues = excelFilterState[col];
+          const allValues = excelUniqueValues[col];
+          if (selectedValues.size !== allValues.length) {
+            let cellVal;
+            if (col === "tags") {
+              cellVal = task.tags;
+              if (!cellVal.some(tag => selectedValues.has(tag))) {
+                matchesExcel = false;
+                break;
+              }
+            } else if (col === "created" || col === "updated") {
+              cellVal = formatDate(new Date(task[col]), 'yyyy/MM/dd');
+              if (!selectedValues.has(cellVal)) {
+                matchesExcel = false;
+                break;
+              }
+            } else {
+              cellVal = task[col] || "";
+              if (!selectedValues.has(cellVal)) {
+                matchesExcel = false;
+                break;
+              }
+            }
+          }
+        }
+        return matchesSearch && matchesExcel;
+      });
+      taskCount.textContent = filteredTasks.length.toString();
+      renderPagination();
+      renderTasks();
+    }
+
+    function renderTasks() {
+      taskListBody.innerHTML = "";
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, filteredTasks.length);
+      if (filteredTasks.length === 0) {
+        taskListBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;">No tasks match your filters.</td></tr>`;
+        return;
+      }
+      filteredTasks.slice(startIndex, endIndex).forEach((task, index) => {
+        const row = document.createElement('tr');
+        row.dataset.taskId = task.id;
+        const createdDate = new Date(task.created);
+        row.innerHTML = `
+          <td><strong>${task.id}</strong></td>
+          <td>${task.title}</td>
+          <td>${task.assignee}</td>
+          <td>${task.status}</td>
+          <td>${task.priority}</td>
+          <td>${task.tags.map(tag => `<span class="tag">${tag}</span>`).join(' ')}</td>
+          <td>${formatDate(createdDate, 'yyyy/MM/dd')}</td>
+          <td>${formatDate(new Date(task.updated), 'yyyy/MM/dd')}</td>
+        `;
+        row.addEventListener('click', () => {
+          currentTaskIndex = index;
+          openSlidePanel();
+          renderIssue();
+        });
+        taskListBody.appendChild(row);
+      });
+    }
+
+    function renderPagination() {
+      pagination.innerHTML = "";
+      const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+      if (totalPages <= 1) return;
+      const prevBtn = document.createElement('div');
+      prevBtn.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+      prevBtn.innerHTML = '&laquo;';
+      if (currentPage > 1) {
+        prevBtn.addEventListener('click', () => { currentPage--; renderTasks(); renderPagination(); });
+      }
+      pagination.appendChild(prevBtn);
+      const maxVisible = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('div');
+        pageBtn.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i.toString();
+        if (i !== currentPage) {
+          pageBtn.addEventListener('click', () => { currentPage = i; renderTasks(); renderPagination(); });
+        }
+        pagination.appendChild(pageBtn);
+      }
+      const nextBtn = document.createElement('div');
+      nextBtn.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+      nextBtn.innerHTML = '&raquo;';
+      if (currentPage < totalPages) {
+        nextBtn.addEventListener('click', () => { currentPage++; renderTasks(); renderPagination(); });
+      }
+      pagination.appendChild(nextBtn);
+    }
+
+    function formatDate(date, format) {
+      format = format.replace(/yyyy/g, date.getFullYear().toString());
+      format = format.replace(/MM/g, ('0' + (date.getMonth() + 1)).slice(-2));
+      format = format.replace(/dd/g, ('0' + date.getDate()).slice(-2));
+      return format;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const dataScript = document.getElementById('taskData');
+      if (dataScript) {
+        try {
+          tasksData = JSON.parse(dataScript.textContent.trim());
+        } catch (e) {
+          console.error("JSON parse error:", e);
+          tasksData = [];
+        }
+      } else {
+        tasksData = [];
+      }
+      initializeExcelFilters();
+      applyFilters();
+      setupEventListeners();
+    });
+
+    async function fsOpenHtmlFile() {
+      try {
+        [htmlFileHandle] = await window.showOpenFilePicker({
+          types: [{
+            description: 'HTML Files',
+            accept: { 'text/html': ['.html'] }
+          }]
+        });
+        const permission = await htmlFileHandle.requestPermission({ mode: 'readwrite' });
+        if (permission !== 'granted') {
+          console.error("書き込み権限が得られませんでした");
+          htmlFileHandle = null;
+          return;
+        }
+        const file = await htmlFileHandle.getFile();
+        const content = await file.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, "text/html");
+        const dataScript = doc.getElementById('taskData');
+        if (dataScript) {
+          try {
+            tasksData = JSON.parse(dataScript.textContent.trim());
+          } catch (e) {
+            console.error("JSON parse error from HTML file:", e);
+            tasksData = [];
+          }
+          initializeExcelFilters();
+          applyFilters();
+          showToast("HTML file loaded successfully", "success");
+        }
+      } catch (e) {
+        console.error("ファイル選択に失敗:", e);
+      }
+    }
+
+    async function fsSaveHtmlFile() {
+      if (!htmlFileHandle) {
+        console.warn("HTMLファイルが開かれていません");
+        return;
+      }
+      const permission = await htmlFileHandle.queryPermission({ mode: 'readwrite' });
+      if (permission !== 'granted') {
+        console.error("保存前に書き込み権限がありません");
+        return;
+      }
+      const dataScript = document.getElementById('taskData');
+      if (dataScript) {
+        dataScript.textContent = JSON.stringify(tasksData, null, 2);
+      }
+      const file = await htmlFileHandle.getFile();
+      const originalContent = await file.text();
+      const updatedContent = originalContent.replace(
+        /(<script[^>]+id="taskData"[^>]*>)[\s\S]*?(<\/script>)/,
+        `$1\n${dataScript.textContent}\n$2`
+      );
+      try {
+        const writable = await htmlFileHandle.createWritable();
+        await writable.write(updatedContent);
+        await writable.close();
+        showToast("taskData部分が保存されました", "success");
+      } catch (e) {
+        console.error("ファイル保存エラー:", e);
+      }
+    }
+
+    function setupEventListeners() {
+      document.getElementById("loginForm").addEventListener("submit", tryLogin);
+      document.getElementById('feedbackBtn').addEventListener('click', openFeedbackModal);
+      //document.getElementById('importData').addEventListener('click', () => {
+      //  importModal.style.display = 'block';
+      //});
+      closeImportModal.addEventListener('click', () => {
+        importModal.style.display = 'none';
+      });
+      cancelImport.addEventListener('click', () => {
+        importModal.style.display = 'none';
+      });
+      confirmImport.addEventListener('click', importDataFromFile);
+
+      dropZone.addEventListener('click', () => { fileInput.click(); });
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) { confirmImport.disabled = false; }
+      });
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--primary)';
+      });
+      dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border)'; });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+          fileInput.files = e.dataTransfer.files;
+          confirmImport.disabled = false;
+        }
+      });
+
+      //exportSampleJson.addEventListener('click', downloadSampleJson);
+      //exportTasks.addEventListener('click', exportTasksAsJson);
+
+      searchInput.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+
+      toastClose.addEventListener('click', () => { toast.style.display = 'none'; });
+
+      createTaskBtn.addEventListener('click', openCreateTaskSlideWindow);
+
+      // ★ 各フィルター用ボタンにイベントを設定
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const column = btn.getAttribute('data-column');
+          openExcelFilterPanel(column, btn);
+        });
+      });
+
+      // ★ ドロップダウン（nav-action-trigger と avatar）のイベント設定
+      document.getElementById('nav-action-trigger').addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('nav-dropdown-menu').classList.toggle('active');
+      });
+      document.getElementById('avatar-trigger').addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('avatar-dropdown-menu').classList.toggle('active');
+      });
+    }
+    // ---------------------------
+    // 2) DOM要素の取得
+    // ---------------------------
+    const openTaskBtn = document.getElementById('open-task-btn');
+
+    const taskListEl = document.getElementById('task-list');
+
+    // ---------------------------
+    // 3) パネル幅リサイズ処理（LocalStorage対応）
+    // ---------------------------
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    panelResizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(getComputedStyle(slidePanel).width, 10);
+      document.addEventListener('mousemove', doDrag);
+      document.addEventListener('mouseup', stopDrag);
+    });
+
+    function doDrag(e) {
+      if (!isResizing) return;
+      let newWidth = startWidth + (startX - e.clientX);
+      const minWidth = 300;
+      const maxWidth = window.innerWidth * 0.8;
+      newWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+      slidePanel.style.width = newWidth + 'px';
+    }
+
+    function stopDrag(e) {
+      isResizing = false;
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      localStorage.setItem('slidePanelWidth', slidePanel.style.width);
+    }
+
+    function loadPanelWidth() {
+      const savedWidth = localStorage.getItem('slidePanelWidth');
+      if (savedWidth) {
+        slidePanel.style.width = savedWidth;
+      }
+    }
+    // ---------------------------
+    // 5) スライドパネルの開閉
+    // ---------------------------
+    function openSlidePanel() {
+      loadPanelWidth();
+      slidePanel.classList.add('active');
+      panelOverlay.classList.add('active');
+    }
+
+    function closeSlidePanel() {
+      slidePanel.classList.remove('active');
+      panelOverlay.classList.remove('active');
+    }
+
+    panelOverlay.addEventListener('click', closeSlidePanel);
+    panelClose.addEventListener('click', closeSlidePanel);
+    /*openTaskBtn.addEventListener('click', () => {
+      currentTaskIndex = 0;
+      openSlidePanel();
+      renderIssue();
+    });*/
+
+    // ---------------------------
+    // 6) 課題情報の表示（メタ情報に編集ボタン追加）
+    // ---------------------------
+
+    function renderIssue() {
+      const issue = filteredTasks[currentTaskIndex];
+      issueCodeEl.textContent = issue.id;
+      issueTitleEl.textContent = issue.title;
+      issuePageInfo.textContent = (currentTaskIndex + 1) + ' / ' + filteredTasks.length;
+      issueMetaEl.innerHTML = `
+        <div class="meta-field">
+          <div class="meta-label">作成日</div>
+          <div class="meta-value">${issue.startDate}</div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">更新日</div>
+          <div class="meta-value">${issue.endDate}</div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">ステータス</div>
+          <div class="meta-value status-${issue.status}">
+            <span class="meta-value-text">${issue.status}</span>
+            <button class="action-trigger meta-edit-trigger" data-field="status">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">優先度</div>
+          <div class="meta-value">
+            <span class="meta-value-text">${issue.priority}</span>
+            <button class="action-trigger meta-edit-trigger" data-field="priority">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">担当者</div>
+          <div class="meta-value">
+            <span class="meta-value-text">${issue.assignee}</span>
+            <button class="action-trigger meta-edit-trigger" data-field="assignee">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">期日</div>
+          <div class="meta-value">
+            <span class="meta-value-text">${issue.dueDate}</span>
+            <button class="action-trigger meta-edit-trigger" data-field="dueDate">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      renderComments();
+    }
+
+    issueMetaEl.addEventListener('click', (e) => {
+      if (e.target.classList.contains('meta-edit-trigger')) {
+        const field = e.target.getAttribute('data-field');
+        const metaValueDiv = e.target.parentElement;
+        const currentText = metaValueDiv.querySelector('.meta-value-text').textContent;
+        metaValueDiv.innerHTML = `<input type="text" class="meta-edit-input" value="${currentText}" style="width:70%;" />
+                                  <button class="meta-save-btn" data-field="${field}">保存</button>`;
+      } else if (e.target.classList.contains('meta-save-btn')) {
+        const field = e.target.getAttribute('data-field');
+        const input = e.target.parentElement.querySelector('.meta-edit-input');
+        const newValue = input.value;
+        const issue = filteredTasks[currentTaskIndex];
+        if (field === 'status') {
+          issue.status = newValue;
+        } else if (field === 'priority') {
+          issue.priority = newValue;
+        } else if (field === 'assignee') {
+          issue.assignee = newValue;
+        } else if (field === 'dueDate') {
+          issue.dueDate = newValue;
+        }
+        renderIssue();
+      }
+    });
+
+    function renderComments() {
+      const issue = filteredTasks[currentTaskIndex];
+      commentListEl.innerHTML = '';
+      issue.comments.forEach((comment, index) => {
+        const commentItem = document.createElement('div');
+        commentItem.classList.add('comment-item');
+        commentItem.setAttribute('data-comment-index', index);
+        commentItem.innerHTML = `
+          <div class="comment-top">
+            <div class="comment-avatar">${comment.author.substring(0, 2)}</div>
+            <div class="comment-author-date">
+              <span class="comment-author">${comment.author}</span>
+              <span class="comment-date">${comment.date}</span>
+            </div>
+            <div class="comment-actions">
+              <button class="action-trigger">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="5" r="2"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <circle cx="12" cy="19" r="2"/>
+                </svg>
+              </button>
+              <div class="action-menu">
+                <button class="edit-comment">編集</button>
+                <button class="delete-comment">削除</button>
+                <button class="restore-comment">復元</button>
+              </div>
+            </div>
+          </div>
+          <div class="comment-text">${comment.text}</div>
+        `;
+        commentListEl.appendChild(commentItem);
+      });
+    }
+
+    commentListEl.addEventListener('click', function (e) {
+      const target = e.target;
+      const commentItem = target.closest('.comment-item');
+      if (!commentItem) return;
+      const commentIndex = commentItem.getAttribute('data-comment-index');
+      const issue = filteredTasks[currentTaskIndex];
+      const comment = issue.comments[commentIndex];
+
+      if (target.classList.contains('action-trigger')) {
+        const menu = commentItem.querySelector('.action-menu');
+        menu.classList.toggle('active');
+      } else if (target.classList.contains('edit-comment')) {
+        const commentTextEl = commentItem.querySelector('.comment-text');
+        const currentText = commentTextEl.textContent;
+        commentTextEl.innerHTML = `<textarea class="edit-textarea" style="width:100%;border:1px solid var(--secondary-light);border-radius:4px;">${currentText}</textarea>
+                                    <button class="save-edit" style="margin-top:4px;">保存</button>`;
+      } else if (target.classList.contains('save-edit')) {
+        const textarea = commentItem.querySelector('.edit-textarea');
+        const newText = textarea.value;
+        comment.history.push({
+          text: comment.text,
+          date: comment.date,
+          edited: comment.edited
+        });
+        comment.text = newText;
+        comment.date = new Date().toLocaleString();
+        comment.edited = true;
+        renderComments();
+      } else if (target.classList.contains('delete-comment')) {
+        comment.history.push({
+          text: comment.text,
+          date: comment.date,
+          edited: comment.edited
+        });
+        comment.text = "このコメントは削除されています。";
+        renderComments();
+      } else if (target.classList.contains('restore-comment')) {
+        if (comment.history.length > 0) {
+          const lastHistory = comment.history.pop();
+          comment.text = lastHistory.text;
+          comment.date = new Date().toLocaleString();
+          comment.edited = lastHistory.edited;
+          renderComments();
+        } else {
+          alert("復元できる履歴はありません。");
+        }
+      }
+    });
+
+    commentSubmit.addEventListener('click', () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      const issue = filteredTasks[currentTaskIndex];
+      const newComment = {
+        author: issue.assignee,
+        date: new Date().toLocaleString(),
+        text: text,
+        edited: false,
+        history: []
+      };
+      issue.comments.push(newComment);
+      commentInput.value = '';
+      saveSlideData();
+      renderSlideWindow();
+    });
+
+    navPrev.addEventListener('click', () => {
+      if (currentTaskIndex > 0) {
+        currentTaskIndex--;
+        renderIssue();
+      } else {
+        alert("最初の課題です。");
+      }
+    });
+
+    navNext.addEventListener('click', () => {
+      if (currentTaskIndex < filteredTasks.length - 1) {
+        currentTaskIndex++;
+        renderIssue();
+      } else {
+        alert("最後の課題です。");
+      }
+    });
+
+    function openCreateTaskSlideWindow() {
+      openTaskEditWindow();
+    }
+
+    function saveSlideData() {
+      if (isCreatingTask) {
+        const newTask = {
+          id: generateNewTaskId(),
+          title: slideTaskTitle.value.trim(),
+          description: slideTaskDescription.value.trim(),
+          status: slideTaskStatus.value,
+          priority: slideTaskPriority.value,
+          assignee: slideTaskAssignee.value.trim(),
+          creator: currentUser ? currentUser.username : "",
+          tags: slideTaskTags.value.split(',').map(t => t.trim()).filter(t => t !== ""),
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          startDate: slideTaskStartDate.value ? new Date(slideTaskStartDate.value).toISOString() : new Date().toISOString(),
+          endDate: slideTaskEndDate.value ? new Date(slideTaskEndDate.value).toISOString() : new Date().toISOString(),
+          attention: slideTaskAttention.value.trim(),
+          comments: []
+        };
+        tasksData.push(newTask);
+        showToast('Task created successfully', 'success');
+        isCreatingTask = false;
+        slidePanel.classList.remove('active');
+        applyFilters();
+      } else {
+        const updatedTask = {
+          ...filteredTasks[currentTaskIndex],
+          title: slideTaskTitle.value.trim(),
+          description: slideTaskDescription.value.trim(),
+          status: slideTaskStatus.value,
+          priority: slideTaskPriority.value,
+          assignee: slideTaskAssignee.value.trim(),
+          tags: slideTaskTags.value.split(',').map(t => t.trim()).filter(t => t !== ""),
+          startDate: slideTaskStartDate.value ? new Date(slideTaskStartDate.value).toISOString() : filteredTasks[currentTaskIndex].startDate,
+          endDate: slideTaskEndDate.value ? new Date(slideTaskEndDate.value).toISOString() : filteredTasks[currentTaskIndex].endDate,
+          attention: slideTaskAttention.value.trim(),
+          comments: filteredTasks[currentTaskIndex].comments
+        };
+        updatedTask.updated = new Date().toISOString();
+        const dataIndex = tasksData.findIndex(task => task.id === updatedTask.id);
+        if (dataIndex !== -1) {
+          tasksData[dataIndex] = updatedTask;
+        }
+        filteredTasks[currentTaskIndex] = updatedTask;
+        showToast('Task updated successfully', 'success');
+        renderSlideWindow();
+        renderTasks();
+      }
+    }
+
+    function generateNewTaskId() {
+      let max = 0;
+      tasksData.forEach(task => {
+        const parts = task.id.split('-');
+        if (parts.length === 2) {
+          const num = parseInt(parts[1], 10);
+          if (num > max) max = num;
+        }
+      });
+      return 'PRJ-' + (max + 1);
+    }
+
+
+    function addNewComment() {
+      if (currentUser && !currentUser.role.includes("管理")) {
+        alert("読み取り専用ユーザはコメントを追加できません。");
+        return;
+      }
+      const text = newComment.value.trim();
+      if (!text) {
+        alert("コメントを入力してください。");
+        return;
+      }
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const newCom = {
+        author: currentUser ? currentUser.username : "",
+        date: dateStr,
+        text: text,
+        edited: false,
+        history: []
+      };
+      filteredTasks[currentTaskIndex].comments.push(newCom);
+      newComment.value = "";
+      saveSlideData();
+      renderSlideWindow();
+      //commentList.scrollTop = commentList.scrollHeight;
+    }
+
+    function editComment(idx) {
+      const comDiv = document.querySelector(`.comment-text[data-comment-index="${idx}"]`);
+      const currentText = comDiv.textContent || "";
+      comDiv.innerHTML = `<textarea class="edit-textarea" style="width:100%; height:60px;">${currentText}</textarea>
+                          <button class="save-edit-btn" data-comment-index="${idx}">保存</button>`;
+    }
+
+    function saveEditedComment(idx) {
+      const comDiv = document.querySelector(`.comment-text[data-comment-index="${idx}"]`);
+      const textarea = comDiv.querySelector(".edit-textarea");
+      const newText = textarea.value.trim();
+      if (!newText) {
+        alert("コメント内容を入力してください。");
+        return;
+      }
+      const task = filteredTasks[currentTaskIndex];
+      const comment = task.comments[idx];
+      if (!comment.history) {
+        comment.history = [];
+      }
+      comment.history.push({ text: comment.text, date: comment.date, edited: comment.edited });
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      comment.text = newText;
+      comment.date = dateStr;
+      comment.edited = true;
+      saveSlideData();
+      renderSlideWindow();
+    }
+
+    function deleteComment(idx) {
+      const task = filteredTasks[currentTaskIndex];
+      const comment = task.comments[idx];
+      if (!comment.history) {
+        comment.history = [];
+      }
+      comment.history.push({ text: comment.text, date: comment.date, edited: comment.edited });
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      comment.text = "このコメントは削除されています。";
+      comment.date = dateStr;
+      comment.edited = true;
+      saveSlideData();
+      renderSlideWindow();
+    }
+
+    function restoreComment(idx) {
+      const task = filteredTasks[currentTaskIndex];
+      const comment = task.comments[idx];
+      if (!comment.history || comment.history.length === 0) {
+        alert("復元できる履歴はありません。");
+        return;
+      }
+      const lastState = comment.history.pop();
+      comment.text = lastState.text;
+      comment.date = lastState.date;
+      comment.edited = lastState.edited;
+      saveSlideData();
+      renderSlideWindow();
+    }
+    function downloadSampleJson() {
+      const sample = JSON.stringify([], null, 2);
+      const blob = new Blob([sample], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sample-tasks.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportTasksAsJson() {
+      const json = JSON.stringify(tasksData, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tasks-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importDataFromFile() {
+      if (fileInput.files === null || fileInput.files.length === 0)
+        return;
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const result = e.target?.result;
+          if (typeof result === "string") {
+            const importedData = JSON.parse(result);
+            if (Array.isArray(importedData)) {
+              tasksData = importedData.map((task) => ({
+                id: task.id || task.number || "",
+                title: task.title || "",
+                description: task.description || "",
+                status: task.status || "To Do",
+                priority: task.priority || "Medium",
+                assignee: task.assignee || task.owner || "",
+                tags: task.tags || [],
+                created: task.created || task.startDate || new Date().toISOString(),
+                updated: task.updated || task.endDate || new Date().toISOString(),
+                startDate: task.startDate || task.created || new Date().toISOString(),
+                endDate: task.endDate || task.updated || new Date().toISOString(),
+                attention: task.attention || "",
+                comments: task.comments || []
+              }));
+              initializeExcelFilters();
+              applyFilters();
+              showToast('Tasks imported successfully', 'success');
+              importModal.style.display = 'none';
+              fileInput.value = "";
+              confirmImport.disabled = true;
+            } else {
+              showToast('Invalid JSON structure', 'error');
+            }
+          }
+        } catch (err) {
+          showToast('Error parsing JSON file', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function showToast(message, type) {
+      toastMessage.textContent = message;
+      toast.className = 'toast';
+      if (type === 'success') {
+        toast.classList.add('toast-success');
+      } else if (type === 'error') {
+        toast.classList.add('toast-error');
+      }
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // ---------------------------
+    // フィードバックモーダル用の処理
+    function openFeedbackModal() {
+      document.getElementById('feedbackModal').style.display = 'block';
+    }
+    function closeFeedbackModal() {
+      document.getElementById('feedbackModal').style.display = 'none';
+    }
+    function submitFeedback(event) {
+      event.preventDefault();
+      const email = document.getElementById('feedbackEmail').value.trim();
+      const message = document.getElementById('feedbackMessage').value.trim();
+      if (!message) {
+        alert("フィードバック内容を入力してください。");
+        return;
+      }
+      // ここでフィードバック送信処理（例：サーバへPOST送信など）を実装可能
+      console.log("Feedback submitted:", { email, message });
+      showToast("フィードバックを送信しました。", "success");
+      // 入力内容をクリアしてモーダルを閉じる
+      document.getElementById('feedbackForm').reset();
+      closeFeedbackModal();
+    }
+  </script>
+</body>
+
+</html>
